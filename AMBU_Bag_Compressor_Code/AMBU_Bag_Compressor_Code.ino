@@ -1,8 +1,13 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
+#include <LiquidCrystal.h>
 
+const int armPin = 6;
 const int powerButtonPin = 13;
-const int ledPin = 12;
+const int ledPin = 5;
+const int piezoPin = 3;
+
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 
 int breathAmount = 0;
 
@@ -14,9 +19,19 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
-  arm.attach(11);
+  arm.attach(armPin);
   pinMode(ledPin, OUTPUT);
   pinMode(powerButtonPin, INPUT);
+  
+  lcd.begin(20,4);
+  lcd.setCursor(0,0);
+  lcd.print("Interval:");
+  lcd.setCursor(0,1);
+  lcd.print("Depth:");
+  lcd.setCursor(0,2);
+  lcd.print("Speed:");
+  lcd.setCursor(0,3);
+  lcd.print("Breaths:");
 }
 
 void loop() {
@@ -29,29 +44,42 @@ int breathInterval = analogRead(A1);
 int servoDepth = analogRead(A2);
   servoDepth = map(servoDepth, 0, 1023, 10, 90);
 int servoSpeed = analogRead(A3);
-  servoSpeed = map(servoSpeed, 0, 1023, 0, 20);
-int setBreathAmount = 3; //*analogRead(A4);
+  servoSpeed = map(servoSpeed, 0, 1023, 1, 20);
+int setBreathAmount = analogRead(A4);
     setBreathAmount = map(setBreathAmount, 0, 1023, 0, 5);
 
-  Serial.print("Interval: "); Serial.print(breathInterval); Serial.print("\t");
-  Serial.print("Depth: "); Serial.print(servoDepth); Serial.print("\t");
-  Serial.print("Speed: "); Serial.print(servoSpeed); Serial.print("\t");
-  Serial.print("Amount: "); Serial.print(setBreathAmount); Serial.print("\t");
-  Serial.print("Position: "); Serial.print(arm.read()); Serial.println("\t");
-  
+  Serial.print("Interval: "); Serial.print(breathInterval); Serial.print("\t"); delay(5);
+  Serial.print("Depth: "); Serial.print(servoDepth); Serial.print("\t"); delay(5);
+  Serial.print("Speed: "); Serial.print(servoSpeed); Serial.print("\t"); delay(5);
+  Serial.print("Amount: "); Serial.print(setBreathAmount); Serial.print("\t"); delay(5);
+  Serial.print("Position: "); Serial.print(arm.read()); Serial.println("\t"); delay(20);
+
+  lcd.setCursor(10,0);
+  lcd.print(breathInterval / 1000);
+  lcd.setCursor(10,1);
+  lcd.print(servoDepth);
+  lcd.setCursor(10,2);
+  lcd.print(servoSpeed);
+    if (servoSpeed < 10) {
+      lcd.setCursor(11,2);
+      lcd.print(" ");
+    }
+  lcd.setCursor(10,3);
+  lcd.print(setBreathAmount + 1);
+
   digitalWrite(ledPin, LOW);
 
-  if (loopRun == HIGH){
+  if (loopRun == LOW){
     //starts the program when button is pressed
     breathAmount = 0;
     digitalWrite(ledPin, HIGH);
     
-    tone(10, 330, 200);
+    tone(piezoPin, 330, 200);
     delay(200);
-    tone(10, 660, 200);
+    tone(piezoPin , 660, 200);
    
   
-    while (breathAmount <= 3) {
+    while (breathAmount <= setBreathAmount) {
       Serial.print("Breath: "); Serial.print(breathAmount); Serial.print("\t");
       for (pos = 90; pos >= servoDepth; pos -= servoSpeed){
         arm.write(pos);
@@ -67,8 +95,8 @@ int setBreathAmount = 3; //*analogRead(A4);
       delay(breathInterval);
     }
   
-   tone(10, 660, 200);
+   tone(piezoPin, 660, 200);
    delay(200);
-   tone(10, 262, 200);
+   tone(piezoPin, 262, 200);
   }
 }
